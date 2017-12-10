@@ -15,6 +15,7 @@ module Typical
     , _word
     , _oneOf
     , _digit
+    , _real
     , _alpha
     , _lower
     , _upper
@@ -23,14 +24,17 @@ module Typical
     , _anything
     , _one
     , _any
+    , _some
     , _optional
     , _exactly
     , _not
     , _or
     , _seq
+    , (=~)
     , match
+    , matchWithRemainder
     , examplePattern
-    , example
+    -- , example
     ) where
 
 -- Structure:
@@ -47,10 +51,10 @@ import qualified Data.List as List
 import Data.Functor (Functor)
 import Debug.Trace (trace)
 
-data Class = SmallAlpha | CapAlpha | Digit | Anything | Specific Char | ClassUnion [Class] deriving Show
-data Delimiter = Start | End deriving Show
+data Class = SmallAlpha | CapAlpha | Digit | Anything | Specific Char | ClassUnion [Class] deriving (Show, Eq)
+data Delimiter = Start | End deriving (Show, Eq)
 data Quantifier = Between Int (Maybe Int)
-  deriving Show
+  deriving (Show, Eq)
 
 data Pattern = 
   Sequence [Pattern] 
@@ -58,23 +62,25 @@ data Pattern =
   | Quantified Quantifier Pattern 
   | Delimited Delimiter Pattern
   | Atom Class  
-  deriving Show
+  deriving (Show, Eq)
 
 data MatchItem = MatchItem { matchPiece :: String, remainder :: String }
   deriving (Show, Eq)
 data MatchTree = MatchTop MatchItem | MatchTree MatchItem [MatchTree] | NoMatch
   deriving (Show, Eq)
 
+(=~) str patt = not . null . match patt $ str
+
 tree item children = 
   let clean [] = NoMatch
       clean ms = MatchTree item [ m | m <- ms, m /= NoMatch ]
    in clean children
 
-flattenTree :: MatchTree -> [String]
+flattenTree :: MatchTree -> [(String, String)]
 flattenTree NoMatch = [] 
-flattenTree (MatchTop item) = [matchPiece item]
-flattenTree (MatchTree (MatchItem {matchPiece=matchPiece}) children) = result where
-  result = [ matchPiece++c | c <- flattenedChildren ]
+flattenTree (MatchTop item) = [(matchPiece item, remainder item)]
+flattenTree (MatchTree (MatchItem {matchPiece=matchPiece, remainder=remainder}) children) = result where
+  result = [ (matchPiece++m, r)  | (m, r) <- flattenedChildren ]
   f = \tree acc -> acc++(flattenTree tree)
   flattenedChildren = foldr f [] children
 
@@ -107,6 +113,8 @@ _anything = Atom Anything
 _oneOf = Atom . ClassUnion . map Specific
 _whitespace = _oneOf " \t\n\r" 
 
+_real = _seq [ _optional (_char '-'), _some _digit, _optional . _seq $ [_char '.', _some _digit] ]
+
 _or :: Pattern -> Pattern -> Pattern
 left `_or` right = Disjunction ( nodes left ++ nodes right ) where
   nodes (Disjunction r) = r
@@ -130,31 +138,42 @@ isAtom Anything c = True
 isAtom (ClassUnion classes) c = any (\x->isAtom x c) $ classes
 
 match :: [Pattern] -> String -> [String]
-match p s = shiftMatch (Sequence p) s
+match pattern = fmap fst . matchWithRemainder pattern
+
+matchWithRemainder :: [Pattern] -> String -> [(String, String)]
+matchWithRemainder p s = matchAll (_seq p) s
   where
+    matchAll :: Pattern -> String -> [(String, String)]
+    matchAll p "" = [] 
+    matchAll p this@(_:cs) = 
+      let ms = flattenTree $ matchPattern p (MatchTop $ MatchItem "" this)
+          ns = matchAll p cs
+       in ms ++ ns
 
-    shiftMatch :: Pattern -> String -> [String]
-    shiftMatch p "" = [] 
-    shiftMatch p this@(_:next) = (flattenTree $ matchPattern p (MatchTop $ MatchItem "" this)) ++ shiftMatch p next
-
-    matchPattern :: Pattern -> MatchTree -> MatchTree
-    matchPattern pattern NoMatch = NoMatch
-    matchPattern pattern (MatchTree (MatchItem {remainder=""}) children) = NoMatch
-    matchPattern pattern (MatchTree item children) = 
-      let matched = [ matchPattern pattern c | c <- children, c /= NoMatch ]
-          filtered = [ c | c <- matched, c/=NoMatch ]
+    clean (MatchTree item children) = 
+      let filtered = [ c | c <- children, c /= NoMatch ]
           tree [] = NoMatch
           tree ms = MatchTree item ms
        in tree filtered
+    clean x = x
+
+    matchPattern :: Pattern -> MatchTree -> MatchTree
+    matchPattern pattern NoMatch = NoMatch
+    -- matchPattern pattern (MatchTree (MatchItem {remainder=""}) children) = NoMatch
+    matchPattern pattern (MatchTree item children) = 
+      let matched = [ matchPattern pattern c | c <- children ]
+       in clean $ MatchTree item matched
     matchPattern (Atom cls) (MatchTop item) = 
       let str = remainder item
           tree char str = MatchTree item [MatchTop $ MatchItem [char] str]
+          shiftTop cs = MatchTop (MatchItem "" cs)
           next [] = NoMatch
           next (c:cs) = if isAtom cls c then tree c cs else NoMatch
        in next str
     matchPattern (Disjunction ps) parent@(MatchTop item) = 
       let children = [ matchPattern pattern parent | pattern <- ps] 
-       in MatchTree item children
+          empty (MatchItem m r) = MatchItem "" r
+       in clean $ MatchTree (empty item) children
     matchPattern (Quantified (Between min maybeMax) pattern) parent = 
       let inRange n = min <= n && n <= (fromMaybe n maybeMax)
           try Nothing NoMatch n = NoMatch
@@ -162,10 +181,5 @@ match p s = shiftMatch (Sequence p) s
           try _ curr n = try (Just curr) (matchPattern pattern curr) (n+1)
        in try Nothing parent 0
     matchPattern (Sequence []) parent = parent
-    matchPattern (Sequence (p:ps)) parent@(MatchTop item) = matchPattern (Sequence ps) (matchPattern p parent)
-    matchPattern _ _ = NoMatch
-
-example :: IO ()
-example = do
-  putStr . show . match [ _word "tun" ] $ "atun"
-
+    matchPattern (Sequence (p:ps)) parent@(MatchTop item) = 
+      matchPattern (Sequence ps) (matchPattern p parent)

@@ -4,8 +4,8 @@ module Lexical
     , parse
     ) where
 
--- import Typical
-import Text.Regex.Posix ((=~))
+import Typical
+-- import Text.Regex.Posix ((=~))
 
 -- type Matcher = String -> [(String, String)] -- input -> array [(match, remainder)]
 -- matcher :: String -> Matcher
@@ -16,16 +16,23 @@ import Text.Regex.Posix ((=~))
 --         (_, match, remainder) = input =~ regex' :: (String, String, String)
 --         regex' = '^':regex
 
-number = "-?([0-9]*\\.)?[0-9]+"
-variable = "[a-zA-Z]+[0-9a-zA-Z_']*"
-strange = "[bcn0]+"
+-- number = "-?([0-9]*\\.)?[0-9]+"
+-- variable = "[a-zA-Z]+[0-9a-zA-Z_']*"
+-- strange = "[bcn0]+"
+--
+-- operator = "[+-/*^&|<>$#@!~]+"
+-- whitespace = "[ \t\r\n]+"
+-- grouping = "[\\[\\](){}]"
 
-operator = "[+-/*^&|<>$#@!~]+"
-whitespace = "[ \t\r\n]+"
-grouping = "[\\[\\](){}]"
+number = _real
+variable = _seq [ _some _alpha, _any ( _alpha `_or` _digit `_or` _oneOf "_$") ]
+strange = _some . _oneOf $ "bcn0"
+operator = _oneOf "+-/*^&|<>$#@!~"
+whitespace = _some _whitespace
+grouping = _oneOf "[](){}"
 
 data LexemeType = Number | Variable | Operator | Strange | Whitespace | Grouping deriving (Show)
-data RegisterEntry = RegisterEntry String LexemeType 
+data RegisterEntry = RegisterEntry Pattern LexemeType 
 register :: [RegisterEntry]
 register = [
   RegisterEntry number Number,
@@ -64,10 +71,14 @@ getNextLexeme input = possibilities
 data LexemeNode = Possible Lexeme String | Impossible
 extractLexeme :: String -> RegisterEntry -> LexemeNode
 extractLexeme input (RegisterEntry regex typ) = node
-  where node = if isNext then Possible (Lexeme match typ) remainder else Impossible
-        isNext = input =~ regex' :: Bool
-        (_, match, remainder) = input =~ regex' :: (String, String, String)
-        regex' = '^':regex
+  where node = lex $ matchWithRemainder [regex] input
+        lex [] = Impossible
+        lex ((match, remainder):_) = Possible (Lexeme match typ) remainder  
+  -- where node = if isNext then Possible (Lexeme match typ) remainder else Impossible
+        -- m = match regex input
+        -- isNext = input =~ regex' :: Bool
+        -- (_, match, remainder) = input =~ regex' :: (String, String, String)
+        -- regex' = '^':regex
         
 parse :: String -> ResultTree
 parse input = deepParse input
@@ -88,5 +99,6 @@ example :: IO ()
 example = do
   putStrLn "Enter program"
   input <- getLine 
+  -- putStr . show. parse $ input
   putStr . prettyFlat . flatten . parse $ input
 

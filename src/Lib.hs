@@ -6,4 +6,4 @@ module Lib
 import qualified Typical
 import qualified Lexical
 
-main = Typical.example
+main = Lexical.example
