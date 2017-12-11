@@ -66,18 +66,19 @@ data Pattern =
 
 data MatchItem = MatchItem { matchPiece :: String, remainder :: String }
   deriving (Show, Eq)
-data MatchTree = MatchTop MatchItem | MatchTree MatchItem [MatchTree] | NoMatch
+data MatchTree = MatchTop MatchItem | MatchTree MatchItem [MatchTree] 
   deriving (Show, Eq)
+
+noMatch = MatchTree (MatchItem "" "") []
 
 (=~) str patt = not . null . match patt $ str
 
 tree item children = 
-  let clean [] = NoMatch
-      clean ms = MatchTree item [ m | m <- ms, m /= NoMatch ]
+  let clean [] = noMatch
+      clean ms = MatchTree item [ m | m <- ms, m /= noMatch ]
    in clean children
 
 flattenTree :: MatchTree -> [(String, String)]
-flattenTree NoMatch = [] 
 flattenTree (MatchTop item) = [(matchPiece item, remainder item)]
 flattenTree (MatchTree (MatchItem {matchPiece=matchPiece, remainder=remainder}) children) = result where
   result = [ (matchPiece++m, r)  | (m, r) <- flattenedChildren ]
@@ -151,15 +152,13 @@ matchWithRemainder p s = matchAll (_seq p) s
        in ms ++ ns
 
     clean (MatchTree item children) = 
-      let filtered = [ c | c <- children, c /= NoMatch ]
-          tree [] = NoMatch
+      let filtered = [ c | c <- children, c /= noMatch ]
+          tree [] = noMatch
           tree ms = MatchTree item ms
        in tree filtered
     clean x = x
 
     matchPattern :: Pattern -> MatchTree -> MatchTree
-    matchPattern pattern NoMatch = NoMatch
-    -- matchPattern pattern (MatchTree (MatchItem {remainder=""}) children) = NoMatch
     matchPattern pattern (MatchTree item children) = 
       let matched = [ matchPattern pattern c | c <- children ]
        in clean $ MatchTree item matched
@@ -167,8 +166,8 @@ matchWithRemainder p s = matchAll (_seq p) s
       let str = remainder item
           tree char str = MatchTree item [MatchTop $ MatchItem [char] str]
           shiftTop cs = MatchTop (MatchItem "" cs)
-          next [] = NoMatch
-          next (c:cs) = if isAtom cls c then tree c cs else NoMatch
+          next [] = noMatch
+          next (c:cs) = if isAtom cls c then tree c cs else noMatch
        in next str
     matchPattern (Disjunction ps) parent@(MatchTop item) = 
       let children = [ matchPattern pattern parent | pattern <- ps] 
@@ -176,8 +175,7 @@ matchWithRemainder p s = matchAll (_seq p) s
        in clean $ MatchTree (empty item) children
     matchPattern (Quantified (Between min maybeMax) pattern) parent = 
       let inRange n = min <= n && n <= (fromMaybe n maybeMax)
-          try Nothing NoMatch n = NoMatch
-          try (Just prev) NoMatch n = if inRange (n-1) then prev else NoMatch
+          try (Just prev) (MatchTree _ []) n = if inRange (n-1) then prev else noMatch
           try _ curr n = try (Just curr) (matchPattern pattern curr) (n+1)
        in try Nothing parent 0
     matchPattern (Sequence []) parent = parent
