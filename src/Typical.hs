@@ -31,7 +31,6 @@ module Typical
     , match
     , matchWithRemainder
     , examplePattern
-    -- , example
     ) where
 
 -- Structure:
@@ -40,8 +39,7 @@ module Typical
 -- * matching functions with result types
 
 -- Pattern Syntax
--- The data type required by the match function is Patter, 
--- which is composed of Class and Quantifier types.
+-- The data type required by the match function is Pattern
 
 import qualified Data.Char as Char
 import qualified Data.List as List
