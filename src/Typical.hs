@@ -1,8 +1,5 @@
 {-# Language OverloadedStrings #-}
 -- Typical Expression Engine
--- Thompson Optimized Matching Machine
--- Ken Thompson nondeterministic automaton kit for construting 
--- fast and type safe character pattern searches.
 -- Loosely based on "Regular Expression Matching Can Be Simple And Fast" by Russ Cox.
 -- https://swtch.com/~rsc/regexp/regexp1.html
 
