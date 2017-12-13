@@ -4,11 +4,14 @@ A non-deterministic typical expressions parser for Haskell language. A typical e
 
 ## Usage
 
-- `import Typical`
+`import Typical`
 
 gives you many functions that correspond to standard regular expressions operators. To parse a string use a `match :: [Pattern] -> [String]`. For example:
 
 - `match [_digit, char '+', _digit] "4+5"`
+- ``match [_digit `_or` _alpha] "a1"``
+- ``match [_digit, _optional . _seq $ [ _char '(', _word "one", _char ')' ] ] "one"``
+
 
 The result will be an array of strings that represents a list of possible matches. Match takes an array of patterns for convenience. Internally, it converts the array into the `Sequence` structure.
 
