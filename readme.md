@@ -2,7 +2,7 @@
 
 A non-deterministic typical expressions parser for Haskell language. A typical expression is a type-safe regular expression.
 
-Other proposed names include: typex (typical expressions), texen (typical expressions engine).
+Other proposed names include: typex (typical expressions) and texen (typical expressions engine).
 
 ## Usage
 
@@ -17,13 +17,13 @@ gives you many functions that correspond to standard regular expressions operato
 
 The result will be an array of strings that represents a list of possible matches. Match takes an array of patterns for convenience. Internally, it converts the array into the `Sequence` structure.
 
-### Types overview
+### Data Types
 
-The most important data type is called `Pattern`. It is recursive and has a number of data constructors. By applying it to the `match` function you get a list of possible matches.
+The most important data type is called `Pattern`. It is recursive and has a number of constructors. By applying it to the `match` function you get a list of possible matches.
 
 ### Positioning Operators
 
-- `_seq :: [Pattern] -> Sequence [Pattern]` - converts an array of patterns into a sequence pattern.
+- `_seq :: [Pattern] -> Pattern` - converts an array of patterns into a sequence pattern.
 - `_or :: Pattern -> Pattern -> Pattern` - converts two patterns into a disjunction.
 
 ### Qualifier Operators
