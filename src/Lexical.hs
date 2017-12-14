@@ -5,25 +5,6 @@ module Lexical
     ) where
 
 import Typical
--- import Text.Regex.Posix ((=~))
-
--- type Matcher = String -> [(String, String)] -- input -> array [(match, remainder)]
--- matcher :: String -> Matcher
--- matcher regex input = ((if match=="" then Nothing else Just match), remainder)
---   where
---     
---
---         (_, match, remainder) = input =~ regex' :: (String, String, String)
---         regex' = '^':regex
-
--- number = "-?([0-9]*\\.)?[0-9]+"
--- variable = "[a-zA-Z]+[0-9a-zA-Z_']*"
--- strange = "[bcn0]+"
---
--- operator = "[+-/*^&|<>$#@!~]+"
--- whitespace = "[ \t\r\n]+"
--- grouping = "[\\[\\](){}]"
-
 number = _real
 variable = _seq [ _some _alpha, _any ( _alpha `_or` _digit `_or` _oneOf "_$") ]
 strange = _some . _oneOf $ "bcn0"
@@ -74,11 +55,6 @@ extractLexeme input (RegisterEntry regex typ) = node
   where node = lex $ matchWithRemainder [regex] input
         lex [] = Impossible
         lex ((match, remainder):_) = Possible (Lexeme match typ) remainder  
-  -- where node = if isNext then Possible (Lexeme match typ) remainder else Impossible
-        -- m = match regex input
-        -- isNext = input =~ regex' :: Bool
-        -- (_, match, remainder) = input =~ regex' :: (String, String, String)
-        -- regex' = '^':regex
         
 parse :: String -> ResultTree
 parse input = deepParse input
@@ -99,6 +75,5 @@ example :: IO ()
 example = do
   putStrLn "Enter program"
   input <- getLine 
-  -- putStr . show. parse $ input
   putStr . prettyFlat . flatten . parse $ input
 
