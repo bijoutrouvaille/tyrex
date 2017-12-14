@@ -34,8 +34,7 @@ The main pattern type is called `Pattern`, it is recursive and has a number of d
 - `_anything :: Pattern` - matches any character.
 - `_oneOf :: [Char] -> Pattern` - matches any one of the characters in the passed array.
 - `_whitespace = _oneOf " \t\n\r" `
-
-- `_real :: Pattern` - matches a positive or negative real number
+- `_real :: Pattern` - matches a positive or negative real number.
 
 ### Quantifier Operators
 
@@ -45,7 +44,7 @@ The main pattern type is called `Pattern`, it is recursive and has a number of d
 - `_some :: Pattern -> Pattern` - greedily matches a pattern at least once.
 - `_any :: Pattern -> Pattern` - greedily matches a pattern zero or more times.
 - `_optional :: Pattern -> Pattern` - greedily matches zero or one times.
-- `_not :: Pattern -> Pattern` - matches 0 times or fails
+- `_not :: Pattern -> Pattern` - matches 0 times or fails.
 
 ## Work in Progress
 
