@@ -68,19 +68,12 @@ noMatch = MatchTree (MatchItem "" "") []
 
 (=~) str patt = not . null . match patt $ str
 
-tree item children = 
-  let clean [] = noMatch
-      clean ms = MatchTree item [ m | m <- ms, m /= noMatch ]
-   in clean children
-
 flattenTree :: MatchTree -> [(String, String)]
 flattenTree (MatchTop item) = [(matchPiece item, remainder item)]
 flattenTree (MatchTree (MatchItem {matchPiece=matchPiece, remainder=remainder}) children) = result where
   result = [ (matchPiece++m, r)  | (m, r) <- flattenedChildren ]
   f = \tree acc -> acc++(flattenTree tree)
   flattenedChildren = foldr f [] children
-
-if' b q p = if b then q else p
 
 fromMaybe d Nothing = d
 fromMaybe _ (Just m) = m
